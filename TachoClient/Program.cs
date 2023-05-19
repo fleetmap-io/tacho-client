@@ -6,28 +6,41 @@ namespace TachoClient
 {
     internal class Program
     {
+        static void Log(string message)
+        {
+            Console.WriteLine($"{DateTime.UtcNow:yyyy-MM-dd HH:mm.ss.fff} {message}");
+        }
+        static void Log(Exception ex)
+        {
+            Log(ex.ToString());
+        }
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Start");
+            Log("Start");
             try
             {
                 ISCardContext context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
                     var readers = context.GetReaders();
-                    Console.WriteLine("Found {0} reader(s)!", readers.Length);
+                    Log($"Found {readers.Length} reader(s)!");
                     foreach (var readerName in readers)
                     {
-                        Console.WriteLine(readerName);
                         var hasCard = HasCard(context, readerName);
-                        Console.WriteLine("HasCard:{0}", hasCard);
+                        var icc = hasCard ? GetICC(context, readerName) : "";
+                        Log($"{readerName} - HasCard:{hasCard} - ICC:{icc}");
+                    }
+                    foreach (var readerName in readers)
+                    {
+                        var hasCard = HasCard(context, readerName);
                         if (hasCard)
                         {
                             var icc = GetICC(context, readerName);
                             if (!string.IsNullOrEmpty(icc))
                             {
+                                Log($"trying download with ICC:{icc} (reader:{readerName})");
                                 trydownload(context, readerName, icc);
-                                Console.WriteLine("trying download with ICC:" + icc);
                             }
                         }
                     }
@@ -36,9 +49,9 @@ namespace TachoClient
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Log(ex);
             }
-            Console.WriteLine("End");
+            Log("End");
         }
 
         static bool HasCard(ISCardContext context, string readerName)
@@ -47,14 +60,13 @@ namespace TachoClient
             {
                 using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
-                    var cardAtr = reader.GetAttrib(SCardAttribute.AtrString);
-                    Console.WriteLine($"ATR: {BitConverter.ToString(cardAtr)}");
+                    reader.GetAttrib(SCardAttribute.AtrString);
                     return true;
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("HasCard Error, " + e.Message);
+                Log("HasCard Error, " + e.Message);
                 return false;
             }
         }
@@ -73,7 +85,7 @@ namespace TachoClient
                         var r2 = SendApduToSmartCard(reader, ReadFile, false);
                         if (Valid(r2))
                         {
-                            return Convert.ToBase64String(r2).TrimEnd('=');
+                            return Convert.ToBase64String(r2.SkipLast(2).ToArray()).TrimEnd('=');
                         }
                     }
                     return "";
@@ -81,19 +93,19 @@ namespace TachoClient
             }
             catch (Exception e)
             {
-                Console.WriteLine("GetICC Error, " + e.Message);
+                Log("GetICC Error, " + e.Message);
                 return "";
             }
         }
 
         private static byte[] SendApduToSmartCard(ICardReader cardReader, byte[] apdu, bool logApuds)
         {
-            if (logApuds) Console.WriteLine("Transmiting APDU to SmartCard: " + BitConverter.ToString(apdu));
+            if (logApuds) Log("Transmiting APDU to SmartCard: " + BitConverter.ToString(apdu));
             var receiveBuffer = new byte[256];
             var bytesWritten = cardReader.Transmit(apdu, receiveBuffer);
             var response = new byte[bytesWritten];
             Array.Copy(receiveBuffer, response, bytesWritten);
-            if (logApuds) Console.WriteLine("Response from SmartCard: " + (response == null ? "null" : response.ToString()));
+            if (logApuds) Log("Response from SmartCard: " + (response == null ? "null" : BitConverter.ToString(response)));
             return response;
         }
 
@@ -111,35 +123,35 @@ namespace TachoClient
                 socketRW.Connect(Dns.GetHostAddresses(Settings.Default.ServerIP), Settings.Default.ServerPort);
                 NetworkStream streamRW = socketRW.GetStream();
                 streamRW.ReadTimeout = Settings.Default.ConnectionFirstTimeOutMinutes * 1000 * 60;
-                Console.WriteLine("Initialized socket successfully");
+                Log("Initialized socket successfully");
 
                 var iccBytes = System.Text.Encoding.UTF8.GetBytes('$' + icc);
                 streamRW.Write(iccBytes, 0, iccBytes.Length); //Sending ICC
-                Console.WriteLine("ICC Sent");
+                Log("ICC Sent");
 
                 byte[] dataRW = new byte[socketRW.ReceiveBufferSize];
                 streamRW.Read(dataRW, 0, socketRW.ReceiveBufferSize);
                 var hasdownload = BitConverter.ToBoolean(dataRW, 0);
-                Console.WriteLine("Has download: " + hasdownload);
+                Log("Has download: " + hasdownload);
                 if (!hasdownload)
                 {
-                    Console.WriteLine("END Connection -> No downloads pending");
+                    Log("END Connection -> No downloads pending");
                     return;
                 }
 
                 //should come from the server now
-                Console.WriteLine("Waiting contact from TachoServer");
+                Log("Waiting contact from TachoServer");
                 try
                 {
                     streamRW.ReadByte();
                 }
                 catch (Exception a)
                 {
-                    Console.WriteLine("ERROR" + a.Message);
-                    Console.WriteLine("END Connection -> no contact from TachoServer");
+                    Log("ERROR" + a.Message);
+                    Log("END Connection -> no contact from TachoServer");
                     return;
                 }
-                Console.WriteLine("Have contact from TachoServer");
+                Log("Have contact from TachoServer");
                 streamRW.ReadTimeout = Settings.Default.ConnectionTimeOutMinutes * 1000 * 60;
 
                 dataRW = new byte[socketRW.ReceiveBufferSize];
@@ -151,21 +163,21 @@ namespace TachoClient
 
                     streamRW.WriteByte(1); //Sending Msg Type = ATR
                     streamRW.Write(atrValue, 0, atrValue.Length); //Sending ATR
-                    Console.WriteLine("Sending atr (1) = " + BitConverter.ToString(atrValue));
+                    Log("Sending atr (1) = " + BitConverter.ToString(atrValue));
 
                     int msgtype = 0;
                     int nbytes = 0;
 
                     try
                     {
-                        Console.WriteLine("Listening");
+                        Log("Listening");
                         msgtype = streamRW.ReadByte();
                         if (msgtype == -1) { return; }
                         nbytes = streamRW.Read(dataRW, 0, socketRW.ReceiveBufferSize);
                     }
                     catch
                     {
-                        Console.WriteLine("END Connection -> connection timeout");
+                        Log("END Connection -> connection timeout");
                         return;
                     }
 
@@ -173,27 +185,27 @@ namespace TachoClient
                     {
                         byte[] truncatedmsg = new byte[nbytes];
                         Array.Copy(dataRW, 0, truncatedmsg, 0, nbytes);
-                        Console.WriteLine("received data:" + BitConverter.ToString(truncatedmsg));
+                        Log("received data:" + BitConverter.ToString(truncatedmsg));
 
                         switch (msgtype)
                         {
                             case 1: //ATR
-                                Console.WriteLine("WARN: ATR Message Type Received out of place. strange, but lets respond. ");
+                                Log("WARN: ATR Message Type Received out of place. strange, but lets respond. ");
                                 streamRW.WriteByte(1); //Sending Msg Type = ATR
                                 streamRW.Write(atrValue, 0, atrValue.Length); //Sending ATR
-                                Console.WriteLine("Sending atr (1) = " + BitConverter.ToString(atrValue));
+                                Log("Sending atr (1) = " + BitConverter.ToString(atrValue));
 
                                 break;
                             case 2: //APDU
-                                Console.WriteLine("Before msgCorrection : " + BitConverter.ToString(truncatedmsg));
+                                Log("Before msgCorrection : " + BitConverter.ToString(truncatedmsg));
                                 truncatedmsg = msgCorrection(truncatedmsg);
-                                Console.WriteLine("After msgCorrection : " + BitConverter.ToString(truncatedmsg));
+                                Log("After msgCorrection : " + BitConverter.ToString(truncatedmsg));
 
                                 byte[] response = SendApduToSmartCard(reader, truncatedmsg, true);
 
                                 if (response == null)
                                 {
-                                    Console.WriteLine("ERROR: Invalid response from card. ");
+                                    Log("ERROR: Invalid response from card. ");
                                     return;
                                 }
                                 else
@@ -201,7 +213,7 @@ namespace TachoClient
                                     //send response
                                     streamRW.WriteByte(2); //Sending Msg Type = APDU
                                     streamRW.Write(response, 0, response.Length); //APDU Data
-                                    Console.WriteLine("Sent APDU: Data=" + BitConverter.ToString(response));
+                                    Log("Sent APDU: Data=" + BitConverter.ToString(response));
                                 }
                                 break;
                         }
@@ -210,16 +222,16 @@ namespace TachoClient
                         try
                         {
                             msgtype = streamRW.ReadByte();
-                            if (msgtype == -1) { Console.WriteLine("msgtype = -1 -> Server closed connection"); return; }
-                            Console.WriteLine("streamRW.ReadByte()");
+                            if (msgtype == -1) { Log("msgtype = -1 -> Server closed connection"); return; }
+                            Log("streamRW.ReadByte()");
                             nbytes = streamRW.Read(dataRW, 0, socketRW.ReceiveBufferSize);
-                            Console.WriteLine("streamRW.Read");
+                            Log("streamRW.Read");
                         }
                         catch (Exception er)
                         {
-                            Console.WriteLine("END Connection -> connection timeout");
-                            Console.WriteLine(er);
-                            Console.WriteLine(er.Message);
+                            Log("END Connection -> connection timeout");
+                            Log(er);
+                            Log(er.Message);
                             return;
                         }
                     }
@@ -227,9 +239,9 @@ namespace TachoClient
             }
             catch (Exception e)
             {
-                Console.WriteLine("END Connection -> general exception");
-                Console.WriteLine(e);
-                Console.WriteLine(e.Message);
+                Log("END Connection -> general exception");
+                Log(e);
+                Log(e.Message);
                 return;
             }
             finally
@@ -237,11 +249,11 @@ namespace TachoClient
                 try
                 {
                     if (socketRW.Connected) { socketRW.Close(); }
-                    Console.WriteLine("Final END");
+                    Log("Final END");
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("error on finally {0}", e.Message);
+                    Log($"error on finally {e.Message}");
                 }
             }
         }
@@ -256,7 +268,7 @@ namespace TachoClient
                     byte[] temp = new byte[truncatedmsg.Length + 1];
                     Array.Copy(truncatedmsg, 0, temp, 0, truncatedmsg.Length);
                     temp[temp.Length - 1] = 0x80;
-                    Console.WriteLine("msgCorrection: 0088 found. Adding 0x80. new msg = " + BitConverter.ToString(temp));
+                    Log("msgCorrection: 0088 found. Adding 0x80. new msg = " + BitConverter.ToString(temp));
                     return temp;
                 }
             }
@@ -268,7 +280,7 @@ namespace TachoClient
                     byte[] temp = new byte[truncatedmsg.Length + 1];
                     Array.Copy(truncatedmsg, 0, temp, 0, truncatedmsg.Length);
                     temp[temp.Length - 1] = 0x00;
-                    Console.WriteLine("msgCorrection: 0CB0 found. Adding 0x00. new msg = " + BitConverter.ToString(temp));
+                    Log("msgCorrection: 0CB0 found. Adding 0x00. new msg = " + BitConverter.ToString(temp));
                     return temp;
                 }
             }
@@ -280,7 +292,7 @@ namespace TachoClient
                     byte[] temp = new byte[truncatedmsg.Length + 1];
                     Array.Copy(truncatedmsg, 0, temp, 0, truncatedmsg.Length);
                     temp[temp.Length - 1] = 0x00;
-                    Console.WriteLine("msgCorrection: 0CD6 found. Adding 0x00. new msg = " + BitConverter.ToString(temp));
+                    Log("msgCorrection: 0CD6 found. Adding 0x00. new msg = " + BitConverter.ToString(temp));
                     return temp;
                 }
             }
