@@ -1,6 +1,7 @@
 ﻿using PCSC;
 using System.Net.Sockets;
 using System.Net;
+using System.Text.Json;
 
 namespace TachoClient
 {
@@ -15,6 +16,52 @@ namespace TachoClient
             Log(ex.ToString());
         }
 
+        private class ReaderInfo
+        {
+            public string Name { get; set; }
+            public bool HasCard { get; set; }
+            public string Icc { get; set; }
+            public string Error { get; set; }
+        }
+
+        static string[] SendReadersInfo(ISCardContext context)
+        {
+            var readers = context.GetReaders();
+            Log($"Found {readers.Length} reader(s)!");
+            var readersInfo = new List<ReaderInfo>();
+            foreach (var readerName in readers)
+            {
+                var ri = new ReaderInfo();
+                ri.Name = readerName;
+                ri.HasCard = HasCard(context, readerName, out var error);
+                ri.Error = error;
+                ri.Icc = "";
+                if (ri.HasCard)
+                {
+                    ri.Icc = GetICC(context, readerName, out var error2);
+                    ri.Error = error2;
+                };
+                readersInfo.Add(ri);
+                Log($"{readerName} - HasCard:{ri.HasCard} - ICC:{ri.Icc} error:{ri.Error}");
+            }
+            try
+            {
+                using (var socketRW = new TcpClient())
+                {
+                    socketRW.Connect(Dns.GetHostAddresses(Settings.Default.ServerIP), Settings.Default.ServerPort);
+                    var readersInfoBytes = System.Text.Encoding.UTF8.GetBytes('#' + JsonSerializer.Serialize(readersInfo));
+                    socketRW.GetStream().Write(readersInfoBytes, 0, readersInfoBytes.Length); //Sending ICC
+                    Log("Readers Info Sent to server");
+                }
+            }
+            catch(Exception ex)
+            {
+                Log($"Failed to send readers info. error:{ex}");
+            }
+
+            return readers;
+        }
+
         static void Main(string[] args)
         {
             Log("Start");
@@ -23,20 +70,13 @@ namespace TachoClient
                 ISCardContext context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
-                    var readers = context.GetReaders();
-                    Log($"Found {readers.Length} reader(s)!");
+                    var readers = SendReadersInfo(context);
                     foreach (var readerName in readers)
                     {
-                        var hasCard = HasCard(context, readerName);
-                        var icc = hasCard ? GetICC(context, readerName) : "";
-                        Log($"{readerName} - HasCard:{hasCard} - ICC:{icc}");
-                    }
-                    foreach (var readerName in readers)
-                    {
-                        var hasCard = HasCard(context, readerName);
+                        var hasCard = HasCard(context, readerName, out _);
                         if (hasCard)
                         {
-                            var icc = GetICC(context, readerName);
+                            var icc = GetICC(context, readerName, out _);
                             if (!string.IsNullOrEmpty(icc))
                             {
                                 Log($"trying download with ICC:{icc} (reader:{readerName})");
@@ -54,8 +94,9 @@ namespace TachoClient
             Log("End");
         }
 
-        static bool HasCard(ISCardContext context, string readerName)
+        static bool HasCard(ISCardContext context, string readerName, out string error)
         {
+            error = "";
             try
             {
                 using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
@@ -66,15 +107,17 @@ namespace TachoClient
             }
             catch (Exception e)
             {
-                Log("HasCard Error, " + e.Message);
+                error = e.Message;
+                Log("HasCard Error, " + error);
                 return false;
             }
         }
 
         protected static readonly byte[] SelectIccFile = { 0x00, 0xA4, 0x02, 0x0C, 0x02, 0x00, 0x02 };
         protected static readonly byte[] ReadFile = { 0x00, 0xB0, 0x00, 0x00, 0x19 };
-        private static string GetICC(ISCardContext context, string readerName)
+        private static string GetICC(ISCardContext context, string readerName, out string error)
         {
+            error = "";
             try
             {
                 using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
@@ -93,7 +136,8 @@ namespace TachoClient
             }
             catch (Exception e)
             {
-                Log("GetICC Error, " + e.Message);
+                error = e.Message;
+                Log("GetICC Error, " + error);
                 return "";
             }
         }
