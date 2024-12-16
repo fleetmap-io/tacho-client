@@ -35,6 +35,6 @@ jobs:
       with:
         artifacts: build-output.zip
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ vars.GITHUB_RUN_NUMBER }}
+        tag: ${{ github.run_number }}
         draft: false
         prerelease: false
