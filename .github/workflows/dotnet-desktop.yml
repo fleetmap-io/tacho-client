@@ -25,10 +25,16 @@ jobs:
         dotnet-version: 6.0.x
     - run: dotnet build TachoClient.sln --configuration Release
     
-    # Upload build artifacts
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v3
+    # Create a ZIP of the build output
+    - name: Archive Build Output
+      run: zip -r build-output.zip **/bin/Release/
+
+    # Upload artifact to GitHub Release
+    - name: Upload to GitHub Release
+      uses: ncipollo/release-action@v1
       with:
-        name: BuildOutput
-        path: |
-          **/bin/Release/
+        artifacts: build-output.zip
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ GITHUB_RUN_NUMBER }}
+        draft: false
+        prerelease: false
