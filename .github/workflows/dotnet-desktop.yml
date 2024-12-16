@@ -25,3 +25,10 @@ jobs:
         dotnet-version: 6.0.x
     - run: dotnet build TachoClient.sln  
     
+    # Upload build artifacts
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: BuildOutput
+        path: |
+          **/bin/Release/
