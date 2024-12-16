@@ -23,7 +23,7 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 6.0.x
-    - run: dotnet build TachoClient.sln  
+    - run: dotnet build TachoClient.sln --configuration Release
     
     # Upload build artifacts
     - name: Upload Build Artifacts
