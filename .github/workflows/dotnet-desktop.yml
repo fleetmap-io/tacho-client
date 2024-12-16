@@ -1,0 +1,43 @@
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 6.0.x
+    - run: dotnet build TachoClient.sln --configuration Release
+    
+    # Create a ZIP of the build output
+    - name: Archive Build Output
+      run: zip -r build-output.zip **/bin/Release/
+
+    # Upload artifact to GitHub Release
+    - name: Upload to GitHub Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: build-output.zip
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.run_number }}
+        draft: false
+        prerelease: false

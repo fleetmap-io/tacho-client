@@ -67,6 +67,8 @@ namespace TachoClient
             Log("Start");
             try
             {
+
+                WebServer.Run();
                 ISCardContext context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
