@@ -62,13 +62,23 @@ namespace TachoClient
             return readers;
         }
 
+        static void LaunchController(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+            builder.WebHost.ConfigureKestrel(o => { o.ListenLocalhost(8080); });
+            builder.Services.AddControllers();
+            var app = builder.Build();
+            app.MapControllers();
+            app.Run();
+        }
+
         static void Main(string[] args)
         {
             Log("Start");
             try
             {
+                Task.Run(() => LaunchController(args));
 
-                WebServer.Run();
                 ISCardContext context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
