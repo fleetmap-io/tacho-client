@@ -26,7 +26,7 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-    - run: dotnet build TachoClient.sln --configuration Release --runtime linux-x64
+    - run: dotnet build TachoClient.sln --configuration Release
     
     # Create a ZIP of the build output
     - name: Archive Build Output

@@ -67,7 +67,7 @@ namespace TachoClient
         static void LaunchController(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            builder.WebHost.ConfigureKestrel(o => { o.ListenLocalhost(8080); });
+            builder.WebHost.ConfigureKestrel(o => { o.ListenAnyIP(8080); });
             builder.Services.AddControllers();
             var app = builder.Build();
             app.MapControllers();
