@@ -86,8 +86,8 @@ namespace TachoClient
                 context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
-                    /*var readers = SendReadersInfo(context);
-                    foreach (var readerName in readers)
+                    var readers = SendReadersInfo(context);
+                    /*foreach (var readerName in readers)
                     {
                         var hasCard = HasCard(context, readerName, out _);
                         if (hasCard)
