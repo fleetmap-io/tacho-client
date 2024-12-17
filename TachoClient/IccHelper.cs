@@ -10,6 +10,9 @@ namespace TachoClient
         private static object CompanyIccListMutex = new object();
         private static Dictionary<int, List<string>> CompanyIccList = new Dictionary<int, List<string>>();
 
+        private static object IccLockMutex = new object();
+        private static Dictionary<string, Tuple<DateTime, int>> IccLock = new Dictionary<string, Tuple<DateTime, int>>();
+
         public static string GetReaderName(string icc)
         {
             lock (IccReaderDicMutex)
@@ -55,6 +58,36 @@ namespace TachoClient
             lock (CompanyIccListMutex)
             {
                 CompanyIccList = JsonSerializer.Deserialize<Dictionary<int, List<string>>>(r);
+            }
+        }
+
+        public static bool LockIcc(string icc, int deviceId)
+        {
+            lock (IccLockMutex)
+            {
+                if(IccLock.TryGetValue(icc, out var timeAndDevice))
+                {
+                    if(timeAndDevice.Item2 == deviceId)
+                    {
+                        return true;
+                    }
+
+                    if(timeAndDevice.Item1 > DateTime.UtcNow)
+                    {
+                        return false;
+                    }
+                }
+
+                IccLock[icc] = new Tuple<DateTime, int>(DateTime.UtcNow.AddMinutes(5), deviceId);
+                return true;
+            }
+        }
+
+        public static void Unlock(string icc)
+        {
+            lock (IccLockMutex)
+            {
+                IccLock.Remove(icc);
             }
         }
     }

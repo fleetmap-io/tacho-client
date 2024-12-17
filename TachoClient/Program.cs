@@ -81,12 +81,13 @@ namespace TachoClient
             Log("Start 1.0");
             try
             {
+                context = ContextFactory.Instance.Establish(SCardScope.System);
+                SendReadersInfo(context);
                 Task.Run(() => LaunchController(args));
 
-                context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
-                    /*var readers = SendReadersInfo(context);
+                    var readers = SendReadersInfo(context);
                     foreach (var readerName in readers)
                     {
                         var hasCard = HasCard(context, readerName, out _);
@@ -95,11 +96,25 @@ namespace TachoClient
                             var icc = GetICC(context, readerName, out _);
                             if (!string.IsNullOrEmpty(icc))
                             {
-                                Log($"trying download with ICC:{icc} (reader:{readerName})");
-                                trydownload(context, readerName, icc);
+                                if (IccHelper.LockIcc(icc, 0))
+                                {
+                                    try
+                                    {
+                                        Log($"trying download with ICC:{icc} (reader:{readerName})");
+                                        trydownload(context, readerName, icc);
+                                    }
+                                    finally
+                                    {
+                                        IccHelper.Unlock(icc);
+                                    }
+                                }
+                                else
+                                {
+                                    Log($"skip locked ICC:{icc} (reader:{readerName})");
+                                }
                             }
                         }
-                    }*/
+                    }
                     Thread.Sleep(30 * 1000);
                 }
             }

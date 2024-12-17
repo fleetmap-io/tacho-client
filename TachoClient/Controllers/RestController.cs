@@ -18,8 +18,13 @@ namespace TachoClient.Controllers
         {
             try
             {
+                var deviceId = req.device.id;
                 var companyId = req.device.attributes.clientId;
                 var icc = IccHelper.GetIcc(companyId);
+                if (!IccHelper.LockIcc(icc, deviceId))
+                {
+                    return Conflict($"Cannot lock card with icc:{icc} for deviceId:{deviceId}");
+                }
                 var readerName = IccHelper.GetReaderName(icc);
 
                 using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
@@ -46,6 +51,7 @@ namespace TachoClient.Controllers
 
         public class Device
         {
+            public required int id { get; set; }
             public required DeviceAttributes attributes { get; set; }
         }
         
