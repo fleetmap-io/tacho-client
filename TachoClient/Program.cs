@@ -84,6 +84,7 @@ namespace TachoClient
                 Task.Run(() => LaunchController(args));
 
                 context = ContextFactory.Instance.Establish(SCardScope.System);
+                var readers = SendReadersInfo(context);
                 while (true)
                 {
                     /*var readers = SendReadersInfo(context);
