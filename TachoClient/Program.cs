@@ -86,7 +86,7 @@ namespace TachoClient
                 context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
-                    var readers = SendReadersInfo(context);
+                    /*var readers = SendReadersInfo(context);
                     foreach (var readerName in readers)
                     {
                         var hasCard = HasCard(context, readerName, out _);
@@ -99,7 +99,7 @@ namespace TachoClient
                                 trydownload(context, readerName, icc);
                             }
                         }
-                    }
+                    }*/
                     Thread.Sleep(30 * 1000);
                 }
             }
