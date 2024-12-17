@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace TachoClient
 {
-    internal class Program
+    public class Program
     {
         static void Log(string message)
         {
@@ -16,7 +16,7 @@ namespace TachoClient
             Log(ex.ToString());
         }
 
-        private class ReaderInfo
+        public class ReaderInfo
         {
             public string Name { get; set; }
             public bool HasCard { get; set; }
@@ -59,6 +59,8 @@ namespace TachoClient
                 Log($"Failed to send readers info. error:{ex}");
             }
 
+            IccHelper.Update(readersInfo);
+
             return readers;
         }
 
@@ -72,6 +74,8 @@ namespace TachoClient
             app.Run();
         }
 
+        public static ISCardContext context = null;
+
         static void Main(string[] args)
         {
             Log("Start");
@@ -79,7 +83,7 @@ namespace TachoClient
             {
                 Task.Run(() => LaunchController(args));
 
-                ISCardContext context = ContextFactory.Instance.Establish(SCardScope.System);
+                context = ContextFactory.Instance.Establish(SCardScope.System);
                 while (true)
                 {
                     var readers = SendReadersInfo(context);
@@ -154,7 +158,7 @@ namespace TachoClient
             }
         }
 
-        private static byte[] SendApduToSmartCard(ICardReader cardReader, byte[] apdu, bool logApuds)
+        public static byte[] SendApduToSmartCard(ICardReader cardReader, byte[] apdu, bool logApuds)
         {
             if (logApuds) Log("Transmiting APDU to SmartCard: " + BitConverter.ToString(apdu));
             var receiveBuffer = new byte[256];
