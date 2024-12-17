@@ -78,7 +78,7 @@ namespace TachoClient
 
         static void Main(string[] args)
         {
-            Log("Start");
+            Log("Start 1.0");
             try
             {
                 Task.Run(() => LaunchController(args));
