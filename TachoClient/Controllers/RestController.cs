@@ -27,15 +27,6 @@ namespace TachoClient.Controllers
                 }
                 var readerName = IccHelper.GetReaderName(icc);
 
-                //before send 1st apdu to card -> Reset Card
-                if (req.apdu == "00A4020C020002")
-                {
-                    using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
-                    {
-                        reader.Disconnect(SCardReaderDisposition.Reset);
-                    }
-                }
-
                 using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
                     var apduBytes = Enumerable.Range(0, req.apdu.Length / 2).Select(x => Convert.ToByte(req.apdu.Substring(x * 2, 2), 16)).ToArray();
