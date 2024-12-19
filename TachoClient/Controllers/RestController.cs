@@ -30,7 +30,8 @@ namespace TachoClient.Controllers
                 using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
                     var apduBytes = Enumerable.Range(0, req.apdu.Length / 2).Select(x => Convert.ToByte(req.apdu.Substring(x * 2, 2), 16)).ToArray();
-                    var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytes, true);
+                    var apduBytesFixed = Program.msgCorrection(apduBytes);                    
+                    var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytesFixed, true);
                     var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
                     return Ok(apduResponse);
                 }

@@ -175,12 +175,11 @@ namespace TachoClient
 
         public static byte[] SendApduToSmartCard(ICardReader cardReader, byte[] apdu, bool logApuds)
         {
-            if (logApuds) Log("Transmiting APDU to SmartCard: " + BitConverter.ToString(apdu));
             var receiveBuffer = new byte[256];
             var bytesWritten = cardReader.Transmit(apdu, receiveBuffer);
             var response = new byte[bytesWritten];
             Array.Copy(receiveBuffer, response, bytesWritten);
-            if (logApuds) Log("Response from SmartCard: " + (response == null ? "null" : BitConverter.ToString(response)));
+            if (logApuds) Log($"APDU: {BitConverter.ToString(apdu).Replace("-","")} - {(response == null ? "null" : BitConverter.ToString(response).Replace("-", ""))}");
             return response;
         }
 
@@ -333,7 +332,7 @@ namespace TachoClient
             }
         }
 
-        private static byte[] msgCorrection(byte[] truncatedmsg)
+        public static byte[] msgCorrection(byte[] truncatedmsg)
         {
             if (truncatedmsg[0] == 0x00 && truncatedmsg[1] == 0x88)
             {
