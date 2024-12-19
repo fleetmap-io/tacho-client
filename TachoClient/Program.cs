@@ -146,7 +146,7 @@ namespace TachoClient
 
         protected static readonly byte[] SelectIccFile = { 0x00, 0xA4, 0x02, 0x0C, 0x02, 0x00, 0x02 };
         protected static readonly byte[] ReadFile = { 0x00, 0xB0, 0x00, 0x00, 0x19 };
-        private static string GetICC(ISCardContext context, string readerName, out string error)
+        public static string GetICC(ISCardContext context, string readerName, out string error)
         {
             error = "";
             try

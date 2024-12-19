@@ -30,7 +30,7 @@ namespace TachoClient.Controllers
                 using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
                     var apduBytes = Enumerable.Range(0, req.apdu.Length / 2).Select(x => Convert.ToByte(req.apdu.Substring(x * 2, 2), 16)).ToArray();
-                    var apduBytesFixed = Program.msgCorrection(apduBytes);                    
+                    var apduBytesFixed = Program.msgCorrection(apduBytes);
                     var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytesFixed, true);
                     var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
                     return Ok(apduResponse);
@@ -45,9 +45,9 @@ namespace TachoClient.Controllers
 
         public class SendApduRequest
         {
-            public required Device device {get; set;}
-            public required string apdu {get; set;}
-            
+            public required Device device { get; set; }
+            public required string apdu { get; set; }
+
         }
 
         public class Device
@@ -55,11 +55,65 @@ namespace TachoClient.Controllers
             public required int id { get; set; }
             public required DeviceAttributes attributes { get; set; }
         }
-        
+
 
         public class DeviceAttributes
         {
             public int clientId { get; set; }
+        }
+
+        [HttpGet("/test")]
+        public IActionResult TestApdu(string apdu)
+        {
+            try
+            {
+                var readerName = "Alcor Micro AU9540 0F 00";
+                using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
+                {
+                    var apduBytes = Enumerable.Range(0, apdu.Length / 2).Select(x => Convert.ToByte(apdu.Substring(x * 2, 2), 16)).ToArray();
+                    var apduBytesFixed = Program.msgCorrection(apduBytes);
+                    var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytesFixed, true);
+                    var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
+                    return Ok(apduResponse);
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(ex.Message);
+            }
+        }
+
+        [HttpGet("/reset")]
+        public IActionResult Reset()
+        {
+            try
+            {
+                var readerName = "Alcor Micro AU9540 0F 00";
+                using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any))
+                {
+                    reader.Disconnect(SCardReaderDisposition.Reset);
+                    return Ok("ok");
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(ex.Message);
+            }
+        }
+
+        [HttpGet("/icc")]
+        public IActionResult Icc()
+        {
+            try
+            {
+                var readerName = "Alcor Micro AU9540 0F 00";
+                var icc = Program.GetICC(Program.context, readerName, out var error);
+                return string.IsNullOrEmpty(error) ? Ok(icc) : Ok(error);
+            }
+            catch (Exception ex)
+            {
+                return Ok(ex.Message);
+            }
         }
     }
 }
