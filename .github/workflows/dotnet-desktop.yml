@@ -40,13 +40,9 @@ jobs:
         SOURCE: "build-output.zip"
         REMOTE_HOST: tacho.fleetmap.pt
         REMOTE_USER: servidor
-        SCRIPT_BEFORE: |
-          whoami
-          ls -al
         SCRIPT_AFTER: |
-          whoami
-          ls -al
           echo $RSYNC_STDOUT
+          rm build-output.zip
           unzip -o build-output.zip
        
     # Upload artifact to GitHub Release
