@@ -68,14 +68,12 @@ namespace TachoClient.Controllers
             try
             {
                 var readerName = "Alcor Micro AU9540 0F 00";
-                using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
-                {
-                    var apduBytes = Enumerable.Range(0, apdu.Length / 2).Select(x => Convert.ToByte(apdu.Substring(x * 2, 2), 16)).ToArray();
-                    var apduBytesFixed = Program.msgCorrection(apduBytes);
-                    var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytesFixed, true);
-                    var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
-                    return Ok(apduResponse);
-                }
+                var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1);
+                var apduBytes = Enumerable.Range(0, apdu.Length / 2).Select(x => Convert.ToByte(apdu.Substring(x * 2, 2), 16)).ToArray();
+                var apduBytesFixed = Program.msgCorrection(apduBytes);
+                var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytesFixed, true);
+                var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
+                return Ok(apduResponse);
             }
             catch (Exception ex)
             {
