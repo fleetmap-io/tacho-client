@@ -37,7 +37,8 @@ jobs:
       with:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_LOCALIZALIA }}
         ARGS: "-rlgoDzvc -i"
-        SOURCE: "build-output.zip"
+        SOURCE: build-output.zip
+        TARGET: /home/servidor/build-output.zip
         REMOTE_HOST: tacho.fleetmap.pt
         REMOTE_USER: servidor
         SCRIPT_AFTER: |
