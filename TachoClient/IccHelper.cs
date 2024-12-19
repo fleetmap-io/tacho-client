@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using PCSC;
+using System.Text.Json;
 
 namespace TachoClient
 {
@@ -13,19 +14,38 @@ namespace TachoClient
         private static object IccLockMutex = new object();
         private static Dictionary<string, Tuple<DateTime, int>> IccLock = new Dictionary<string, Tuple<DateTime, int>>();
 
-        public static string GetReaderName(string icc)
+        private static object CardReaderCacheMutex = new object();
+        private static Dictionary<int, ICardReader> CardReaderCache = new Dictionary<int, ICardReader>();
+
+        public static string? GetReaderName(string icc)
         {
             lock (IccReaderDicMutex)
             {
-                return IccReaderDic[icc];
+                return IccReaderDic.TryGetValue(icc, out var result) ? result : null;
             }
         }
 
-        public static string GetIcc(int companyId)
+        public static string? GetIcc(int companyId)
         {
             lock (CompanyIccListMutex)
             {
-                return CompanyIccList[companyId].First();
+                return CompanyIccList.TryGetValue(companyId, out var list)
+                     ? list.FirstOrDefault()
+                     : null;                    
+            }
+        }
+        public static ICardReader? GetCardReader(int deviceId)
+        {
+            lock (CardReaderCacheMutex)
+            {
+                return CardReaderCache.TryGetValue(deviceId, out var cardReader) ? cardReader : null;
+            }
+        }
+        public static void SetCardReader(int deviceId, ICardReader cardReader)
+        {
+            lock (CardReaderCacheMutex)
+            {
+                CardReaderCache[deviceId] = cardReader;
             }
         }
 
