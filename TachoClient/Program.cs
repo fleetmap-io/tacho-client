@@ -7,7 +7,7 @@ namespace TachoClient
 {
     public class Program
     {
-        static void Log(string message)
+        public static void Log(string message)
         {
             Console.WriteLine($"{DateTime.UtcNow:yyyy-MM-dd HH:mm.ss.fff} {message}");
         }

@@ -27,18 +27,23 @@ namespace TachoClient.Controllers
                 }
                 var readerName = IccHelper.GetReaderName(icc);
 
-                using (var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
+                if(req.apdu == "00A4020C020002") //1st apdu -> reset card
                 {
-                    var apduBytes = Enumerable.Range(0, req.apdu.Length / 2).Select(x => Convert.ToByte(req.apdu.Substring(x * 2, 2), 16)).ToArray();
-                    var apduBytesFixed = Program.msgCorrection(apduBytes);
-                    var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytesFixed, true);
-                    var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
-                    return Ok(apduResponse);
+                    Program.Log($"Reset card with icc:{icc}");
+                    Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.Any)
+                                   .Disconnect(SCardReaderDisposition.Reset);
                 }
+
+                var reader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1);
+                var apduBytes = Enumerable.Range(0, req.apdu.Length / 2).Select(x => Convert.ToByte(req.apdu.Substring(x * 2, 2), 16)).ToArray();
+                var apduBytesFixed = Program.msgCorrection(apduBytes);
+                var apduResponseBytes = Program.SendApduToSmartCard(reader, apduBytesFixed, true);
+                var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
+                return Ok(apduResponse);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"RestController.SendApdu error:{ex}");
+                Program.Log($"RestController.SendApdu error:{ex}");
                 throw;
             }
         }
