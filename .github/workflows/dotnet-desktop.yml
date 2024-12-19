@@ -10,9 +10,7 @@ permissions:
   contents: write
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -20,31 +18,11 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
-    # Install the .NET Core workload
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-    - run: dotnet build TachoClient.sln --configuration Release
-    
-    # Create a ZIP of the build output
-    - name: Archive Build Output
-      run: zip -r build-output.zip **/bin/Release/
-
-    - name: Deploy
-      uses: easingthemes/ssh-deploy@main
-      with:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY_LOCALIZALIA }}
-        REMOTE_HOST: tacho.fleetmap.pt
-        REMOTE_USER: servidor
-        SCRIPT_AFTER: |
-          echo $RSYNC_STDOUT
-          ls
-          rm -f /home/servidor/build-output.zip
-          unzip -o /home/servidor/build-output.zip
+        
+    - run: |
+        dotnet build TachoClient.sln --configuration Release
+        zip -r build-output.zip **/bin/Release/
        
-    # Upload artifact to GitHub Release
     - name: Upload to GitHub Release
       uses: ncipollo/release-action@v1
       with:
@@ -53,4 +31,18 @@ jobs:
         tag: ${{ github.run_number }}
         draft: false
         prerelease: false
+        
+    - name: executing remote ssh commands using password
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        key: ${{ secrets.SSH_PRIVATE_KEY_LOCALIZALIA }}
+        host: tacho.fleetmap.pt
+        username: servidor
+        script: |
+          whoami
+          ls
+          rm -f build-output.zip
+          wget -v "https://github.com/fleetmap-io/tacho-client/releases/download/${{ github.run_number }}/build-output.zip"
+          unzip -o /home/servidor/build-output.zip
+
     
