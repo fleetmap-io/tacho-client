@@ -42,7 +42,7 @@ jobs:
         REMOTE_USER: servidor
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
-          rm build-output.zip
+          rm -f build-output.zip
           unzip -o build-output.zip
        
     # Upload artifact to GitHub Release
