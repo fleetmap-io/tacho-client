@@ -43,6 +43,7 @@ jobs:
         REMOTE_USER: servidor
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
+          ls
           rm -f /home/servidor/build-output.zip
           unzip -o /home/servidor/build-output.zip
        
