@@ -177,7 +177,7 @@ namespace TachoClient.Controllers
         }
 
         [HttpGet("/version")]
-        public IActionResult Icc()
+        public IActionResult Version()
         {
             return Ok("1.0");
         }
