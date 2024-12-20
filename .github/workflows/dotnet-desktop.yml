@@ -53,7 +53,7 @@ jobs:
             echo "No process named $PROCESS_NAME is currently running."
           fi
           echo "Starting process $PROCESS_NAME..."
-          sudo ./TachoClient/bin/Release/net8.0/TachoClient &
+          sudo nohup ./TachoClient/bin/Release/net8.0/TachoClient &> /dev/null &
 
 
     
