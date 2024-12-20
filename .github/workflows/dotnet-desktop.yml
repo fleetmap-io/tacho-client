@@ -47,5 +47,5 @@ jobs:
             echo "Killing process with PID $PID"
             sudo kill -9 $PID
           fi
-          sudo nohup ./TachoClient/bin/Release/net8.0/TachoClient &> /dev/null &
+          sudo nohup ./TachoClient/bin/Release/net8.0/TachoClient &> output.log &
     
