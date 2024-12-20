@@ -44,6 +44,7 @@ jobs:
           rm -f build-output.zip
           wget -v "https://github.com/fleetmap-io/tacho-client/releases/download/${{ github.run_number }}/build-output.zip"
           unzip -o /home/servidor/build-output.zip
+          PROCESS_NAME=TachoClient
           PID=$(ps -u root | grep "$PROCESS_NAME" | grep -v "grep" | awk '{print $1}')
           if [ -n "$PID" ]; then
             echo "Killing process $PROCESS_NAME with PID $PID"
