@@ -175,5 +175,11 @@ namespace TachoClient.Controllers
                 return Ok(ex.Message);
             }
         }
+
+        [HttpGet("/version")]
+        public IActionResult Icc()
+        {
+            return Ok("1.0");
+        }
     }
 }
