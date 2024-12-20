@@ -73,7 +73,7 @@ namespace TachoClient.Controllers
 
 
 
-        [HttpPost]
+        [HttpPost("/release")]
         public IActionResult Release(ReleaseRequest req)
         {
             try
