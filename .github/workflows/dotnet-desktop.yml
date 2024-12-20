@@ -39,21 +39,13 @@ jobs:
         host: tacho.fleetmap.pt
         username: servidor
         script: |
-          whoami
-          ls
           rm -f build-output.zip
           wget -v "https://github.com/fleetmap-io/tacho-client/releases/download/${{ github.run_number }}/build-output.zip"
           unzip -o /home/servidor/build-output.zip
-          PROCESS_NAME=TachoClient
-          PID=$(ps -u root | grep "$PROCESS_NAME" | grep -v "grep" | awk '{print $1}')
+          PID=$(ps -u root | grep TachoClient | grep -v "grep" | awk '{print $1}')
           if [ -n "$PID" ]; then
-            echo "Killing process $PROCESS_NAME with PID $PID"
+            echo "Killing process with PID $PID"
             sudo kill -9 $PID
-          else
-            echo "No process named $PROCESS_NAME is currently running."
           fi
-          echo "Starting process $PROCESS_NAME..."
           sudo nohup ./TachoClient/bin/Release/net8.0/TachoClient &> /dev/null &
-
-
     
