@@ -6,7 +6,6 @@ namespace TachoClient
     {
         private Settings() { }
         public static Settings Default = new Settings();
-
         public string ServerIP => IPUtils.GetTachoServerIp();
         public int ServerPort = 9096;
         public int ConnectionFirstTimeOutMinutes = 5;
