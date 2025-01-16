@@ -91,7 +91,7 @@ namespace TachoClient
                     {
                         if (ri.HasCard && !string.IsNullOrEmpty(ri.Icc))
                         {
-                            if (IccHelper.LockIcc(ri.Icc, 0))
+                            if (IccHelper.LockIcc(ri.Icc))
                             {
                                 try
                                 {
@@ -150,7 +150,7 @@ namespace TachoClient
                 icc = IccHelper.GetIcc(readerName);
                 if (!string.IsNullOrEmpty(icc))
                 {
-                    locked = IccHelper.LockIcc(icc, 0);
+                    locked = IccHelper.LockIcc(icc);
                     if (!locked)
                     {
                         return "";

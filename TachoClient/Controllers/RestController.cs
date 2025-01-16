@@ -31,7 +31,7 @@ namespace TachoClient.Controllers
                     }
 
                     //Lock Card
-                    if (!IccHelper.LockIcc(icc, deviceId))
+                    if (!IccHelper.LockIcc(icc))
                     {
                         return Conflict($"Cannot lock card with icc:{icc} for deviceId:{deviceId}");
                     }

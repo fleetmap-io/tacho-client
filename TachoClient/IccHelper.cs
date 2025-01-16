@@ -13,7 +13,7 @@ namespace TachoClient
         private static Dictionary<int, List<string>> CompanyIccList = new Dictionary<int, List<string>>();
 
         private static object IccLockMutex = new object();
-        private static Dictionary<string, Tuple<DateTime, int>> IccLock = new Dictionary<string, Tuple<DateTime, int>>();
+        private static Dictionary<string, DateTime> IccLock = new Dictionary<string, DateTime>();
 
         private static object CardReaderCacheMutex = new object();
         private static Dictionary<int, ICardReader> CardReaderCache = new Dictionary<int, ICardReader>();
@@ -91,24 +91,19 @@ namespace TachoClient
             }
         }
 
-        public static bool LockIcc(string icc, int deviceId)
+        public static bool LockIcc(string icc)
         {
             lock (IccLockMutex)
             {
-                if(IccLock.TryGetValue(icc, out var timeAndDevice))
+                if(IccLock.TryGetValue(icc, out var time))
                 {
-                    if(timeAndDevice.Item2 == deviceId)
-                    {
-                        return true;
-                    }
-
-                    if(timeAndDevice.Item1 > DateTime.UtcNow)
+                    if(time > DateTime.UtcNow)
                     {
                         return false;
                     }
                 }
 
-                IccLock[icc] = new Tuple<DateTime, int>(DateTime.UtcNow.AddMinutes(5), deviceId);
+                IccLock[icc] = DateTime.UtcNow.AddMinutes(5);
                 return true;
             }
         }
