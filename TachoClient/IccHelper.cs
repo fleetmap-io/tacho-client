@@ -7,6 +7,7 @@ namespace TachoClient
     {
         private static object IccReaderDicMutex = new object();
         private static Dictionary<string, string> IccReaderDic = new Dictionary<string, string>();
+        private static Dictionary<string, string> ReaderIccDic = new Dictionary<string, string>();
 
         private static object CompanyIccListMutex = new object();
         private static Dictionary<int, List<string>> CompanyIccList = new Dictionary<int, List<string>>();
@@ -24,6 +25,13 @@ namespace TachoClient
                 return IccReaderDic.TryGetValue(icc, out var result) ? result : null;
             }
         }
+        public static string? GetIcc(string readerName)
+        {
+            lock (IccReaderDicMutex)
+            {
+                return ReaderIccDic.TryGetValue(readerName, out var result) ? result : null;
+            }
+        }
 
         public static string? GetIcc(int companyId)
         {
@@ -34,6 +42,7 @@ namespace TachoClient
                      : null;                    
             }
         }
+
         public static ICardReader? GetCardReader(int deviceId)
         {
             lock (CardReaderCacheMutex)
@@ -65,6 +74,7 @@ namespace TachoClient
                     if (ri.HasCard)
                     {
                         IccReaderDic[ri.Icc] = ri.Name;
+                        ReaderIccDic[ri.Name] = ri.Icc;
                     }
                 }
             }

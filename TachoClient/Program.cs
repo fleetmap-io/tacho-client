@@ -24,7 +24,7 @@ namespace TachoClient
             public string Error { get; set; }
         }
 
-        static string[] SendReadersInfo(ISCardContext context)
+        static List<ReaderInfo> SendReadersInfo(ISCardContext context)
         {
             var readers = context.GetReaders();
             Log($"Found {readers.Length} reader(s)!");
@@ -61,7 +61,7 @@ namespace TachoClient
 
             IccHelper.Update(readersInfo);
 
-            return readers;
+            return readersInfo;
         }
 
         static void LaunchController(string[] args)
@@ -82,43 +82,35 @@ namespace TachoClient
             try
             {
                 context = ContextFactory.Instance.Establish(SCardScope.System);
-                SendReadersInfo(context);
-                LaunchController(args);
-                /*
+                SendReadersInfo(context);                
                 Task.Run(() => LaunchController(args));
-
                 while (true)
                 {
-                    var readers = SendReadersInfo(context);
-                    foreach (var readerName in readers)
+                    var readersInfo = SendReadersInfo(context);
+                    foreach (var ri in readersInfo)
                     {
-                        var hasCard = HasCard(context, readerName, out _);
-                        if (hasCard)
+                        if (ri.HasCard && !string.IsNullOrEmpty(ri.Icc))
                         {
-                            var icc = GetICC(context, readerName, out _);
-                            if (!string.IsNullOrEmpty(icc))
+                            if (IccHelper.LockIcc(ri.Icc, 0))
                             {
-                                if (IccHelper.LockIcc(icc, 0))
+                                try
                                 {
-                                    try
-                                    {
-                                        Log($"trying download with ICC:{icc} (reader:{readerName})");
-                                        trydownload(context, readerName, icc);
-                                    }
-                                    finally
-                                    {
-                                        IccHelper.Unlock(icc);
-                                    }
+                                    Log($"trying download with ICC:{ri.Icc} (reader:{ri.Name})");
+                                    trydownload(context, ri.Name, ri.Icc);
                                 }
-                                else
+                                finally
                                 {
-                                    Log($"skip locked ICC:{icc} (reader:{readerName})");
+                                    IccHelper.Unlock(ri.Icc);
                                 }
+                            }
+                            else
+                            {
+                                Log($"skip locked ICC:{ri.Icc} (reader:{ri.Name})");
                             }
                         }
                     }
                     Thread.Sleep(30 * 1000);
-                }*/
+                }
             }
             catch (Exception ex)
             {
@@ -150,9 +142,21 @@ namespace TachoClient
         protected static readonly byte[] ReadFile = { 0x00, 0xB0, 0x00, 0x00, 0x19 };
         public static string GetICC(ISCardContext context, string readerName, out string error)
         {
+            var locked = false;
+            var icc = "";
             error = "";
             try
             {
+                icc = IccHelper.GetIcc(readerName);
+                if (!string.IsNullOrEmpty(icc))
+                {
+                    locked = IccHelper.LockIcc(icc, 0);
+                    if (!locked)
+                    {
+                        return "";
+                    }
+                }
+
                 using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
                     var r1 = SendApduToSmartCard(reader, SelectIccFile, false);
@@ -172,6 +176,13 @@ namespace TachoClient
                 error = e.Message;
                 Log("GetICC Error, " + error);
                 return "";
+            }
+            finally
+            {
+                if (locked)
+                {
+                    IccHelper.Unlock(icc);
+                }
             }
         }
 
