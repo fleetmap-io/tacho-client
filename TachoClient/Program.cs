@@ -86,28 +86,35 @@ namespace TachoClient
                 Task.Run(() => LaunchController(args));
                 while (true)
                 {
-                    var readersInfo = SendReadersInfo(context);
-                    foreach (var ri in readersInfo)
+                    try 
                     {
-                        if (ri.HasCard && !string.IsNullOrEmpty(ri.Icc))
+                        var readersInfo = SendReadersInfo(context);
+                        foreach (var ri in readersInfo)
                         {
-                            if (IccHelper.LockIcc(ri.Icc))
+                            if (ri.HasCard && !string.IsNullOrEmpty(ri.Icc))
                             {
-                                try
+                                if (IccHelper.LockIcc(ri.Icc))
                                 {
-                                    Log($"trying download with ICC:{ri.Icc} (reader:{ri.Name})");
-                                    trydownload(context, ri.Name, ri.Icc);
+                                    try
+                                    {
+                                        Log($"trying download with ICC:{ri.Icc} (reader:{ri.Name})");
+                                        trydownload(context, ri.Name, ri.Icc);
+                                    }
+                                    finally
+                                    {
+                                        IccHelper.Unlock(ri.Icc);
+                                    }
                                 }
-                                finally
+                                else
                                 {
-                                    IccHelper.Unlock(ri.Icc);
+                                    Log($"skip locked ICC:{ri.Icc} (reader:{ri.Name})");
                                 }
-                            }
-                            else
-                            {
-                                Log($"skip locked ICC:{ri.Icc} (reader:{ri.Name})");
                             }
                         }
+                    } 
+                    catch (Exception ex) 
+                    {
+                        Log(ex);
                     }
                     Thread.Sleep(30 * 1000);
                 }
