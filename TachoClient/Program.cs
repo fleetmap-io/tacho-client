@@ -115,6 +115,7 @@ namespace TachoClient
                     catch (Exception ex) 
                     {
                         Log(ex);
+                        Thread.Sleep(120 * 1000);
                     }
                     Thread.Sleep(30 * 1000);
                 }
