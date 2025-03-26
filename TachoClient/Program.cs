@@ -347,7 +347,18 @@ namespace TachoClient
 
         public static byte[] msgCorrection(byte[] truncatedmsg)
         {
-            if (truncatedmsg[0] == 0x00 && truncatedmsg[1] == 0x88)
+            if (truncatedmsg[0] == 0x00 && truncatedmsg[1] == 0x86)
+            {
+                if(truncatedmsg.Length - 5 - truncatedmsg[4] - 1 < 0)
+                {
+                    byte[] temp = new byte[truncatedmsg.Length + 1];
+                    Array.Copy(truncatedmsg, 0, temp, 0, truncatedmsg.Length);
+                    temp[temp.Length - 1] = 0x00;
+                    Log("msgCorrection: 0086 found. Adding 0x00. new msg = " + BitConverter.ToString(temp));
+                    return temp;
+                }
+            }
+            else if (truncatedmsg[0] == 0x00 && truncatedmsg[1] == 0x88)
             {
                 byte expectedparametersize = truncatedmsg[4];
                 if (expectedparametersize + 6 != truncatedmsg.Length)
