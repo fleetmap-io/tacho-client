@@ -129,5 +129,133 @@ namespace TachoClient.Controllers
         {
             return Ok("1.2");
         }
+
+        //-- ino part
+        private static object IccSessionDicMutex = new object();
+        private static Dictionary<string, string> IccSessionDic = new Dictionary<string, string>();
+
+
+        [HttpGet("/lock")]
+        public IActionResult Lock(string icc)
+        {
+            try
+            {
+                if (!IccHelper.LockIcc(icc))
+                {
+                    return Conflict($"Cannot lock card with icc:{icc}");
+                }
+
+                var sessionid = Guid.NewGuid().ToString();
+                lock (IccSessionDicMutex)
+                {
+                    IccSessionDic.Add(sessionid, icc);
+                }
+                return Ok(sessionid);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.lock icc:{icc} error:{ex}");
+                throw;
+            }
+        }
+
+        [HttpGet("/getatr")]
+        public IActionResult GetAtr(string sessionid)
+        {
+            try
+            {
+                string icc;
+                lock (IccSessionDicMutex)
+                {
+                    if(!IccSessionDic.TryGetValue(sessionid, out icc))
+                    {
+                        return NotFound($"Cannot find icc for sessionid:{sessionid}");
+                    }
+                }
+
+                var readerName = IccHelper.GetReaderName(icc);
+                if (string.IsNullOrEmpty(readerName))
+                {
+                    return NotFound($"Cannot find reader for icc:{icc}");
+                }
+
+                //Reset Card
+                string atr;
+                using (var cr = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
+                {
+                    byte[] atrValue = cr.GetAttrib(SCardAttribute.AtrString);
+                    atr = BitConverter.ToString(atrValue);
+                    cr.Disconnect(SCardReaderDisposition.Reset);
+                }
+
+                return Ok(atr);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.getatr sessionid:{sessionid} error:{ex}");
+                throw;
+            }
+        }
+
+        [HttpGet("/apdu")]
+        public IActionResult Apdu(string sessionid, string apdu)
+        {
+            try
+            {
+                string icc;
+                lock (IccSessionDicMutex)
+                {
+                    if (!IccSessionDic.TryGetValue(sessionid, out icc))
+                    {
+                        return NotFound($"Cannot find icc for sessionid:{sessionid}");
+                    }
+                }
+
+                var readerName = IccHelper.GetReaderName(icc);
+                if (string.IsNullOrEmpty(readerName))
+                {
+                    return NotFound($"Cannot find reader for icc:{icc}");
+                }
+
+                var cardReader = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1);
+
+                var apduBytes = Enumerable.Range(0, apdu.Length / 2).Select(x => Convert.ToByte(apdu.Substring(x * 2, 2), 16)).ToArray();
+                var apduBytesFixed = Program.msgCorrection(apduBytes);
+                var apduResponseBytes = Program.SendApduToSmartCard(cardReader, apduBytesFixed, true);
+                var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
+                return Ok(apduResponse);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.apdu sessionid:{sessionid} apdu:{apdu} error:{ex}");
+                throw;
+            }
+        }
+
+        [HttpGet("/unlock")]
+        public IActionResult Unlock(string sessionid)
+        {
+            try
+            {
+                string icc;
+                lock (IccSessionDicMutex)
+                {
+                    if (!IccSessionDic.TryGetValue(sessionid, out icc))
+                    {
+                        return NotFound($"Cannot find icc for sessionid:{sessionid}");
+                    }
+                    IccSessionDic.Remove(sessionid);
+                }
+
+                IccHelper.Unlock(icc);
+
+                return Ok("ok");
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.Unlock sessionid:{sessionid} error:{ex}");
+                throw;
+            }
+        }
     }
 }
