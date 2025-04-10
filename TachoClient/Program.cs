@@ -161,7 +161,7 @@ namespace TachoClient
                     locked = IccHelper.LockIcc(icc);
                     if (!locked)
                     {
-                        return "";
+                        return icc;
                     }
                 }
 
