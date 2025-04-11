@@ -44,20 +44,6 @@ namespace TachoClient
                 readersInfo.Add(ri);
                 Log($"{readerName} - HasCard:{ri.HasCard} - ICC:{ri.Icc} error:{ri.Error}");
             }
-            try
-            {
-                using (var socketRW = new TcpClient())
-                {
-                    socketRW.Connect(Dns.GetHostAddresses(Settings.Default.ServerIP), Settings.Default.ServerPort);
-                    var readersInfoBytes = System.Text.Encoding.UTF8.GetBytes('#' + JsonSerializer.Serialize(readersInfo));
-                    socketRW.GetStream().Write(readersInfoBytes, 0, readersInfoBytes.Length); //Sending ICC
-                    Log("Readers Info Sent to server");
-                }
-            }
-            catch(Exception ex)
-            {
-                Log($"Failed to send readers info. error:{ex}");
-            }
 
             IccHelper.Update(readersInfo);
 
@@ -83,42 +69,7 @@ namespace TachoClient
             {
                 context = ContextFactory.Instance.Establish(SCardScope.System);
                 SendReadersInfo(context);                
-                Task.Run(() => LaunchController(args));
-                while (true)
-                {
-                    try 
-                    {
-                        var readersInfo = SendReadersInfo(context);
-                        foreach (var ri in readersInfo)
-                        {
-                            if (ri.HasCard && !string.IsNullOrEmpty(ri.Icc))
-                            {
-                                if (IccHelper.LockIcc(ri.Icc))
-                                {
-                                    try
-                                    {
-                                        Log($"trying download with ICC:{ri.Icc} (reader:{ri.Name})");
-                                        trydownload(context, ri.Name, ri.Icc);
-                                    }
-                                    finally
-                                    {
-                                        IccHelper.Unlock(ri.Icc);
-                                    }
-                                }
-                                else
-                                {
-                                    Log($"skip locked ICC:{ri.Icc} (reader:{ri.Name})");
-                                }
-                            }
-                        }
-                    } 
-                    catch (Exception ex) 
-                    {
-                        Log(ex);
-                        Thread.Sleep(120 * 1000);
-                    }
-                    Thread.Sleep(30 * 1000);
-                }
+                LaunchController(args);
             }
             catch (Exception ex)
             {
@@ -207,150 +158,6 @@ namespace TachoClient
         private static bool Valid(byte[] apduResponse)
         {
             return apduResponse[apduResponse.Length-2] == 0x90 && apduResponse[apduResponse.Length-1] == 0x00;
-        }
-
-        public static void trydownload(ISCardContext context, string readerName, string icc)
-        {
-            TcpClient socketRW = new TcpClient();
-            try
-            {
-                socketRW = new TcpClient();
-                socketRW.Connect(Dns.GetHostAddresses(Settings.Default.ServerIP), Settings.Default.ServerPort);
-                NetworkStream streamRW = socketRW.GetStream();
-                streamRW.ReadTimeout = Settings.Default.ConnectionFirstTimeOutMinutes * 1000 * 60;
-                Log("Initialized socket successfully");
-
-                var iccBytes = System.Text.Encoding.UTF8.GetBytes('$' + icc);
-                streamRW.Write(iccBytes, 0, iccBytes.Length); //Sending ICC
-                Log("ICC Sent");
-
-                byte[] dataRW = new byte[socketRW.ReceiveBufferSize];
-                streamRW.Read(dataRW, 0, socketRW.ReceiveBufferSize);
-                var hasdownload = BitConverter.ToBoolean(dataRW, 0);
-                Log("Has download: " + hasdownload);
-                if (!hasdownload)
-                {
-                    Log("END Connection -> No downloads pending");
-                    return;
-                }
-
-                //should come from the server now
-                Log("Waiting contact from TachoServer");
-                try
-                {
-                    streamRW.ReadByte();
-                }
-                catch (Exception a)
-                {
-                    Log("ERROR" + a.Message);
-                    Log("END Connection -> no contact from TachoServer");
-                    return;
-                }
-                Log("Have contact from TachoServer");
-                streamRW.ReadTimeout = Settings.Default.ConnectionTimeOutMinutes * 1000 * 60;
-
-                dataRW = new byte[socketRW.ReceiveBufferSize];
-
-                // Get the ATR of the card
-                using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
-                {
-                    byte[] atrValue = reader.GetAttrib(SCardAttribute.AtrString);
-
-                    streamRW.WriteByte(1); //Sending Msg Type = ATR
-                    streamRW.Write(atrValue, 0, atrValue.Length); //Sending ATR
-                    Log("Sending atr (1) = " + BitConverter.ToString(atrValue));
-
-                    int msgtype = 0;
-                    int nbytes = 0;
-
-                    try
-                    {
-                        Log("Listening");
-                        msgtype = streamRW.ReadByte();
-                        if (msgtype == -1) { return; }
-                        nbytes = streamRW.Read(dataRW, 0, socketRW.ReceiveBufferSize);
-                    }
-                    catch
-                    {
-                        Log("END Connection -> connection timeout");
-                        return;
-                    }
-
-                    while (nbytes > 0)
-                    {
-                        byte[] truncatedmsg = new byte[nbytes];
-                        Array.Copy(dataRW, 0, truncatedmsg, 0, nbytes);
-                        Log("received data:" + BitConverter.ToString(truncatedmsg));
-
-                        switch (msgtype)
-                        {
-                            case 1: //ATR
-                                Log("WARN: ATR Message Type Received out of place. strange, but lets respond. ");
-                                streamRW.WriteByte(1); //Sending Msg Type = ATR
-                                streamRW.Write(atrValue, 0, atrValue.Length); //Sending ATR
-                                Log("Sending atr (1) = " + BitConverter.ToString(atrValue));
-
-                                break;
-                            case 2: //APDU
-                                Log("Before msgCorrection : " + BitConverter.ToString(truncatedmsg));
-                                truncatedmsg = msgCorrection(truncatedmsg);
-                                Log("After msgCorrection : " + BitConverter.ToString(truncatedmsg));
-
-                                byte[] response = SendApduToSmartCard(reader, truncatedmsg, true);
-
-                                if (response == null)
-                                {
-                                    Log("ERROR: Invalid response from card. ");
-                                    return;
-                                }
-                                else
-                                {
-                                    //send response
-                                    streamRW.WriteByte(2); //Sending Msg Type = APDU
-                                    streamRW.Write(response, 0, response.Length); //APDU Data
-                                    Log("Sent APDU: Data=" + BitConverter.ToString(response));
-                                }
-                                break;
-                        }
-                        //Listen Again
-                        dataRW = new byte[socketRW.ReceiveBufferSize];
-                        try
-                        {
-                            msgtype = streamRW.ReadByte();
-                            if (msgtype == -1) { Log("msgtype = -1 -> Server closed connection"); return; }
-                            Log("streamRW.ReadByte()");
-                            nbytes = streamRW.Read(dataRW, 0, socketRW.ReceiveBufferSize);
-                            Log("streamRW.Read");
-                        }
-                        catch (Exception er)
-                        {
-                            Log("END Connection -> connection timeout");
-                            Log(er);
-                            Log(er.Message);
-                            return;
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Log("END Connection -> general exception");
-                Log(e);
-                Log(e.Message);
-                return;
-            }
-            finally
-            {
-                try
-                {
-                    if (socketRW.Connected) { socketRW.Close(); }
-                    Log("Final END");
-                }
-                catch (Exception e)
-                {
-                    Log($"error on finally {e.Message}");
-                }
-            }
         }
 
         public static byte[] msgCorrection(byte[] truncatedmsg)
