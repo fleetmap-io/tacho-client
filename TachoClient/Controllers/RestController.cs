@@ -223,7 +223,7 @@ namespace TachoClient.Controllers
                 var apduBytes = Enumerable.Range(0, apdu.Length / 2).Select(x => Convert.ToByte(apdu.Substring(x * 2, 2), 16)).ToArray();
                 var apduBytesFixed = Program.msgCorrection(apduBytes);
                 var apduResponseBytes = Program.SendApduToSmartCard(cardReader, apduBytesFixed, true);
-                var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
+                var apduResponse = BitConverter.ToString(apduResponseBytes);
                 return Ok(apduResponse);
             }
             catch (Exception ex)
