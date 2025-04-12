@@ -71,8 +71,6 @@ namespace TachoClient.Controllers
             }
         }
 
-
-
         [HttpPost("/release")]
         public IActionResult Release(ReleaseRequest req)
         {
@@ -254,7 +252,23 @@ namespace TachoClient.Controllers
             }
             catch (Exception ex)
             {
-                Program.Log($"RestController.Unlock sessionid:{sessionid} error:{ex}");
+                Program.Log($"RestController.unlock sessionid:{sessionid} error:{ex}");
+                throw;
+            }
+        }
+
+        //-- generic part
+        [HttpGet("/readers")]
+        public IActionResult readers()
+        {
+            try
+            {
+                var result = Program.GetReadersInfo(Program.context);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.Readers error:{ex}");
                 throw;
             }
         }

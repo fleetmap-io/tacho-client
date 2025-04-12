@@ -24,7 +24,7 @@ namespace TachoClient
             public string Error { get; set; }
         }
 
-        static List<ReaderInfo> SendReadersInfo(ISCardContext context)
+        public static List<ReaderInfo> GetReadersInfo(ISCardContext context)
         {
             var readers = context.GetReaders();
             Log($"Found {readers.Length} reader(s)!");
@@ -68,7 +68,7 @@ namespace TachoClient
             try
             {
                 context = ContextFactory.Instance.Establish(SCardScope.System);
-                SendReadersInfo(context);                
+                GetReadersInfo(context);                
                 LaunchController(args);
             }
             catch (Exception ex)
