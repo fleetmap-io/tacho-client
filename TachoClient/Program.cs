@@ -84,7 +84,7 @@ namespace TachoClient
             error = "";
             try
             {
-                return context.GetReaderStatus(readerName).CurrentState.HasFlag(SCRState.Present);
+                return context.GetReaderStatus(readerName).EventState.HasFlag(SCRState.Present);
             }
             catch (Exception e)
             {
