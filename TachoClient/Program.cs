@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Net;
 using System.Text.Json;
+using System.Reflection.PortableExecutable;
 
 namespace TachoClient
 {
@@ -83,11 +84,7 @@ namespace TachoClient
             error = "";
             try
             {
-                using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
-                {
-                    reader.GetAttrib(SCardAttribute.AtrString);
-                    return true;
-                }
+                return context.GetReaderStatus(readerName).CurrentState.HasFlag(SCRState.Present);
             }
             catch (Exception e)
             {
@@ -119,15 +116,20 @@ namespace TachoClient
                 using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
                     var r1 = SendApduToSmartCard(reader, SelectIccFile);
-                    if (Valid(r1))
+                    if (!Valid(r1))
                     {
-                        var r2 = SendApduToSmartCard(reader, ReadFile);
-                        if (Valid(r2))
-                        {
-                            return Convert.ToBase64String(r2.SkipLast(2).ToArray()).TrimEnd('=');
-                        }
+                        error = "Failed to select icc file";
+                        return "";
                     }
-                    return "";
+
+                    var r2 = SendApduToSmartCard(reader, ReadFile);
+                    if (!Valid(r2))
+                    {
+                        error = "Failed to reader icc file";
+                        return "";
+                    }
+                    
+                    return Convert.ToBase64String(r2.SkipLast(2).ToArray()).TrimEnd('=');
                 }
             }
             catch (Exception e)
