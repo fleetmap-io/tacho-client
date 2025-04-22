@@ -259,7 +259,7 @@ namespace TachoClient.Controllers
 
         //-- generic part
         [HttpGet("/readers")]
-        public IActionResult readers()
+        public IActionResult Readers()
         {
             try
             {
@@ -269,6 +269,20 @@ namespace TachoClient.Controllers
             catch (Exception ex)
             {
                 Program.Log($"RestController.Readers error:{ex}");
+                throw;
+            }
+        }
+
+        [HttpGet("/readernames")]
+        public IActionResult ReaderNames()
+        {
+            try
+            {
+                return Ok(Program.context.GetReaders());
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.ReaderNames error:{ex}");
                 throw;
             }
         }

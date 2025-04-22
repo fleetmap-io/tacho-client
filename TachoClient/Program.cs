@@ -92,7 +92,7 @@ namespace TachoClient
             catch (Exception e)
             {
                 error = e.Message;
-                Log("HasCard Error, " + error);
+                Log($"HasCard Error: {error}");
                 return false;
             }
         }
