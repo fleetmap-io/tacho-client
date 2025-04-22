@@ -118,10 +118,10 @@ namespace TachoClient
 
                 using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
-                    var r1 = SendApduToSmartCard(reader, SelectIccFile, false);
+                    var r1 = SendApduToSmartCard(reader, SelectIccFile);
                     if (Valid(r1))
                     {
-                        var r2 = SendApduToSmartCard(reader, ReadFile, false);
+                        var r2 = SendApduToSmartCard(reader, ReadFile);
                         if (Valid(r2))
                         {
                             return Convert.ToBase64String(r2.SkipLast(2).ToArray()).TrimEnd('=');
@@ -145,13 +145,13 @@ namespace TachoClient
             }
         }
 
-        public static byte[] SendApduToSmartCard(ICardReader cardReader, byte[] apdu, bool logApuds)
+        public static byte[] SendApduToSmartCard(ICardReader cardReader, byte[] apdu)
         {
             var receiveBuffer = new byte[256];
             var bytesWritten = cardReader.Transmit(apdu, receiveBuffer);
             var response = new byte[bytesWritten];
             Array.Copy(receiveBuffer, response, bytesWritten);
-            if (logApuds) Log($"APDU: {BitConverter.ToString(apdu).Replace("-","")} - {(response == null ? "null" : BitConverter.ToString(response).Replace("-", ""))}");
+            Log($"APDU: {BitConverter.ToString(apdu).Replace("-","")} - {(response == null ? "null" : BitConverter.ToString(response).Replace("-", ""))}");
             return response;
         }
 

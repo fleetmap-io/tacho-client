@@ -60,7 +60,7 @@ namespace TachoClient.Controllers
 
                 var apduBytes = Enumerable.Range(0, req.apdu.Length / 2).Select(x => Convert.ToByte(req.apdu.Substring(x * 2, 2), 16)).ToArray();
                 var apduBytesFixed = Program.msgCorrection(apduBytes);
-                var apduResponseBytes = Program.SendApduToSmartCard(cardReader, apduBytesFixed, true);
+                var apduResponseBytes = Program.SendApduToSmartCard(cardReader, apduBytesFixed);
                 var apduResponse = BitConverter.ToString(apduResponseBytes).Replace("-", "");
                 return Ok(apduResponse);
             }
@@ -220,7 +220,7 @@ namespace TachoClient.Controllers
                 apdu = apdu.Replace("-", "");
                 var apduBytes = Enumerable.Range(0, apdu.Length / 2).Select(x => Convert.ToByte(apdu.Substring(x * 2, 2), 16)).ToArray();
                 var apduBytesFixed = Program.msgCorrection(apduBytes);
-                var apduResponseBytes = Program.SendApduToSmartCard(cardReader, apduBytesFixed, true);
+                var apduResponseBytes = Program.SendApduToSmartCard(cardReader, apduBytesFixed);
                 var apduResponse = BitConverter.ToString(apduResponseBytes);
                 return Ok(apduResponse);
             }
@@ -279,6 +279,22 @@ namespace TachoClient.Controllers
             try
             {
                 return Ok(Program.context.GetReaders());
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.ReaderNames error:{ex}");
+                throw;
+            }
+        }
+
+        [HttpGet("/icc")]
+        public IActionResult Icc(string readerName)
+        {
+            try
+            {
+                string error;
+                var icc = Program.GetICC(Program.context, readerName, out error);
+                return Ok(string.IsNullOrEmpty(error) ? icc : error);
             }
             catch (Exception ex)
             {
