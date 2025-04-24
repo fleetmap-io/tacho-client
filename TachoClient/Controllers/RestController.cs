@@ -298,7 +298,26 @@ namespace TachoClient.Controllers
             }
             catch (Exception ex)
             {
-                Program.Log($"RestController.ReaderNames error:{ex}");
+                Program.Log($"RestController.Icc readerName:{readerName} error:{ex}");
+                throw;
+            }
+        }
+
+        [HttpGet("/reset")]
+        public IActionResult Reset(string readerName)
+        {
+            try
+            {
+                using (var cr = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
+                {
+                    cr.Disconnect(SCardReaderDisposition.Reset);
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"RestController.Reset readerName:{readerName} error:{ex}");
                 throw;
             }
         }
