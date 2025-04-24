@@ -113,6 +113,11 @@ namespace TachoClient
                     }
                 }
 
+                using (var cr = Program.context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
+                {
+                    cr.Disconnect(SCardReaderDisposition.Reset);
+                }
+
                 using (var reader = context.ConnectReader(readerName, SCardShareMode.Shared, SCardProtocol.T1))
                 {
                     var r1 = SendApduToSmartCard(reader, SelectIccFile);
