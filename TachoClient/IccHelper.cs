@@ -115,5 +115,20 @@ namespace TachoClient
                 IccLock.Remove(icc);
             }
         }
+        
+        public static List<(int companyId, string icc)> GetAllIccsWithCompanyId()
+        {
+                var list = new List<(int companyId, string icc)>();
+                foreach (var kvp in CompanyIccList)
+                {
+                    var companyId = kvp.Key;
+                    var iccs = kvp.Value;
+                    foreach (var icc in iccs)
+                    {
+                        list.Add((companyId, icc));
+                    }
+                }
+                return list;
+        }
     }
 }

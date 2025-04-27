@@ -27,7 +27,12 @@ namespace TachoClient.Controllers
                     var icc = IccHelper.GetIcc(companyId);
                     if (string.IsNullOrEmpty(icc))
                     {
-                        return NotFound($"No icc for companyId:{companyId}");
+                        var allIccs = IccHelper.GetAllIccsWithCompanyId();
+                        var iccListStr = allIccs.Any()
+                            ? string.Join("\n", allIccs.Select(x => $"companyId:{x.companyId}, icc:{x.icc}"))
+                            : "no ICCs available";
+
+                        return NotFound($"No ICC for companyId:{companyId}.\nAvailable ICCs:\n{iccListStr}");
                     }
 
                     //Lock Card
