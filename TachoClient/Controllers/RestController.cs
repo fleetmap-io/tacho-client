@@ -29,7 +29,7 @@ namespace TachoClient.Controllers
                     {
                         var allIccs = IccHelper.GetAllIccsWithCompanyId();
                         var iccListStr = allIccs.Any()
-                            ? string.Join("\n", allIccs.Select(x => $"companyId:{x.companyId}, icc:{x.icc}"))
+                            ? string.Join(";", allIccs.Select(x => $"companyId:{x.companyId}, icc:{x.icc}"))
                             : "no ICCs available";
 
                         return NotFound($"No ICC for companyId: {companyId}. Available ICCs: {iccListStr}");
