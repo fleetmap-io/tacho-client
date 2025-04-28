@@ -32,7 +32,7 @@ namespace TachoClient.Controllers
                             ? string.Join("\n", allIccs.Select(x => $"companyId:{x.companyId}, icc:{x.icc}"))
                             : "no ICCs available";
 
-                        return NotFound($"No ICC for companyId:{companyId}.\nAvailable ICCs:\n{iccListStr}");
+                        return NotFound($"No ICC for companyId: {companyId}. Available ICCs: {iccListStr}");
                     }
 
                     //Lock Card
